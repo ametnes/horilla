@@ -107,7 +107,7 @@ class DefaultHorillaMailBackend(EmailBackend):
 
     @property
     def dynamic_display_name(self):
-        return self.configuration.display_name if self.configuration else None
+        return self.configuration.display_name if self.configuration else getattr(settings, "DEFAULT_FROM_NAME", None)
 
     @property
     def dynamic_from_email_with_display_name(self):
