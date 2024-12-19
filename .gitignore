@@ -152,4 +152,4 @@ whoosh_index/
 #PyCharm
 .idea
 
-*.sqlite3
+*.sqlite3*

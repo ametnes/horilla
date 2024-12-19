@@ -706,7 +706,9 @@ class EmployeePasswordResetView(PasswordResetView):
             return HttpResponseRedirect(self.request.META.get("HTTP_REFERER", "/"))
 
         except Exception as e:
-            messages.error(self.request, f"Something went wrong.....")
+            msg = f"Something went wrong.....{e}"
+            _LOG.debug(msg=msg, stack_info=True)
+            messages.error(self.request, msg)
             return HttpResponseRedirect(self.request.META.get("HTTP_REFERER", "/"))
 
 
