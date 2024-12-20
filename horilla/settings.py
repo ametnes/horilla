@@ -230,6 +230,14 @@ USE_L10N = True
 
 USE_TZ = True
 
+EMAIL_USE_TLS = env('HORILLA_EMAIL_USE_TLS', default="true") == 'true'
+EMAIL_HOST = env('HORILLA_EMAIL_HOST', default=None)
+EMAIL_PORT = env('HORILLA_EMAIL_PORT', default=None)
+EMAIL_HOST_USER = env('HORILLA_EMAIL_HOST_USER', default=None)
+EMAIL_HOST_PASSWORD = env('HORILLA_EMAIL_HOST_PASSWORD', default=None)
+DEFAULT_FROM_EMAIL = env('HORILLA_DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
+DEFAULT_FROM_NAME = env('HORILLA_DEFAULT_FROM_NAME', default=None if DEFAULT_FROM_EMAIL is None else DEFAULT_FROM_EMAIL.split('@')[0])
+
 # Production settings
 if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True

@@ -6,6 +6,7 @@ This module is used to map url pattens with django views or methods
 
 import csv
 import json
+import logging
 import os
 import uuid
 from datetime import datetime, timedelta
@@ -179,6 +180,8 @@ from horilla_audit.forms import HistoryTrackingFieldsForm
 from horilla_audit.models import AccountBlockUnblock, AuditTag, HistoryTrackingFields
 from notifications.models import Notification
 from notifications.signals import notify
+
+_LOG = logging.getLogger(__name__)
 
 
 def custom404(request):
@@ -635,7 +638,7 @@ class HorillaPasswordResetView(PasswordResetView):
         EMAIL_BACKEND = getattr(settings, "EMAIL_BACKEND", "")
         if EMAIL_BACKEND and default != EMAIL_BACKEND:
             is_default_backend = False
-        if is_default_backend and not email_backend.configuration:
+        if is_default_backend and not email_backend.host:
             messages.error(self.request, _("Primary mail server is not configured"))
             return redirect("forgot-password")
 
@@ -681,7 +684,7 @@ class EmployeePasswordResetView(PasswordResetView):
             EMAIL_BACKEND = getattr(settings, "EMAIL_BACKEND", "")
             if EMAIL_BACKEND and default != EMAIL_BACKEND:
                 is_default_backend = False
-            if is_default_backend and not email_backend.configuration:
+            if is_default_backend and not email_backend.host:
                 messages.error(self.request, _("Primary mail server is not configured"))
                 return HttpResponseRedirect(self.request.META.get("HTTP_REFERER", "/"))
 
@@ -707,7 +710,9 @@ class EmployeePasswordResetView(PasswordResetView):
             return HttpResponseRedirect(self.request.META.get("HTTP_REFERER", "/"))
 
         except Exception as e:
-            messages.error(self.request, f"Something went wrong.....")
+            msg = f"Something went wrong.....{e}"
+            _LOG.debug(msg=msg, stack_info=True)
+            messages.error(self.request, msg)
             return HttpResponseRedirect(self.request.META.get("HTTP_REFERER", "/"))
 
 
@@ -1445,6 +1450,7 @@ def mail_server_test_email(request):
                 msg.send()
 
             except Exception as e:
+                _LOG.debug(msg=str(e), stack_info=True)
                 messages.error(request, " ".join([_("Something went wrong :"), str(e)]))
                 return HttpResponse("<script>window.location.reload()</script>")
 
