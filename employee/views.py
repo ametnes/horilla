@@ -71,6 +71,7 @@ from employee.forms import (
     EmployeeBankDetailsUpdateForm,
     EmployeeExportExcelForm,
     EmployeeForm,
+    EmployeeGeneralSettingPrefixForm,
     EmployeeNoteForm,
     EmployeeTagForm,
     EmployeeWorkInformationForm,
@@ -333,7 +334,7 @@ def about_tab(request, obj_id, **kwargs):
     )
     return render(
         request,
-        "tabs/personal-tab.html",
+        "tabs/personal_tab.html",
         {
             "employee": employee,
             "employee_leaves": employee_leaves,
@@ -599,14 +600,10 @@ def update_document_title(request, id):
     if request.method == "POST":
         document.title = name
         document.save()
-
-        return JsonResponse(
-            {"success": True, "message": "Document title updated successfully"}
-        )
+        messages.success(request, _("Document title updated successfully"))
     else:
-        return JsonResponse(
-            {"success": False, "message": "Invalid request"}, status=400
-        )
+        messages.error(request, _("Invalid request"))
+    return HttpResponse("")
 
 
 @login_required
@@ -623,30 +620,40 @@ def document_delete(request, id):
     """
     try:
         document = Document.objects.filter(id=id)
-        # users can delete own documents
         if not request.user.has_perm("horilla_documents.delete_document"):
-            document = document.filter(employee_id__employee_user_id=request.user)
+            document = document.filter(
+                employee_id__employee_user_id=request.user
+            ).exclude(document_request_id__isnull=False)
         if document:
+            document_first = document.first()
             document.delete()
             messages.success(
                 request,
                 _(
-                    f"Document request {document.first()} for {document.first().employee_id} deleted successfully"
+                    f"Document request {document_first} for {document_first.employee_id} deleted successfully"
                 ),
             )
+            referrer = request.META.get("HTTP_REFERER", "")
+            referrer = "/" + "/".join(referrer.split("/")[3:])
+            if referrer.startswith("/employee/employee-view/") or referrer.endswith(
+                "/employee/employee-profile/"
+            ):
+                existing_documents = Document.objects.filter(
+                    employee_id=document_first.employee_id
+                )
+                if not existing_documents:
+                    return HttpResponse(
+                        f"""
+                            <span hx-get='/employee/document-tab/{document_first.employee_id.id}?employee_view=true'
+                            hx-target='#document_target' hx-trigger='load'></span>
+                        """
+                    )
+            return HttpResponse()
         else:
             messages.error(request, _("Document not found"))
-
     except ProtectedError:
         messages.error(request, _("You cannot delete this document."))
-
-    if "HTTP_HX_TARGET" in request.META and request.META.get(
-        "HTTP_HX_TARGET"
-    ).startswith("document"):
-        clear_messages(request)
-        return HttpResponse()
-    else:
-        return HttpResponse("<script>window.location.reload();</script>")
+    return HttpResponse("<script>window.location.reload();</script>")
 
 
 @login_required
@@ -3426,14 +3433,24 @@ def encashment_condition_create(request):
 @permission_required("employee.add_employeegeneralsetting")
 def initial_prefix(request):
     """
-    This method is used to set initial prefix
+    This method is used to set the initial prefix using a form.
     """
-    instance = EmployeeGeneralSetting.objects.first()
-    instance = instance if instance else EmployeeGeneralSetting()
-    instance.badge_id_prefix = request.POST["initial_prefix"]
-    instance.save()
-    messages.success(request, "Initial prefix update")
-    return HttpResponseRedirect(request.META.get("HTTP_REFERER", "/"))
+    instance = EmployeeGeneralSetting.objects.first()  # Get the first instance or None
+    if not instance:
+        instance = EmployeeGeneralSetting()  # Create a new instance if none exists
+
+    if request.method == "POST":
+        form = EmployeeGeneralSettingPrefixForm(request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Initial prefix updated successfully.")
+            return HttpResponseRedirect(request.META.get("HTTP_REFERER", "/"))
+        else:
+            messages.error(request, "There was an error updating the prefix.")
+    else:
+        form = EmployeeGeneralSettingPrefixForm(instance=instance)
+
+    return render(request, "settings/settings.html", {"prefix_form": form})
 
 
 @login_required

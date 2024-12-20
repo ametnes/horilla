@@ -11,7 +11,7 @@ from typing import Iterable
 import django
 from django.apps import apps
 from django.contrib import messages
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractUser, User
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.signals import post_save
@@ -1647,6 +1647,20 @@ class Holidays(HorillaModel):
     def __str__(self):
         return self.name
 
+    def today_holidays(today=None) -> models.QuerySet:
+        """
+        Retrieve holidays that overlap with the given date (default is today).
+
+        Args:
+            today (date, optional): The date to check for holidays. Defaults to the current date.
+
+        Returns:
+            QuerySet: A queryset of `Holidays` instances where the given date falls between
+                    `start_date` and `end_date` (inclusive).
+        """
+        today = today or date.today()
+        return Holidays.objects.filter(start_date__lte=today, end_date__gte=today)
+
 
 class CompanyLeaves(HorillaModel):
     based_on_week = models.CharField(
@@ -1780,3 +1794,6 @@ def create_deduction_cutleave_from_penalty(sender, instance, created, **kwargs):
                 )
 
             available.save()
+
+
+User.add_to_class("is_new_employee", models.BooleanField(default=False))
