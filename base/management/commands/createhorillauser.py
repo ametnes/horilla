@@ -33,7 +33,7 @@ class Command(BaseCommand):
             email = options["email"]
             phone = options["phone"]
 
-        adminuser = User.objects.filter(username=first_name).first()
+        adminuser = User.objects.filter(username=username).first()
         if adminuser is not None:
             self.stdout.write(self.style.WARNING('User "%s" already exist' % adminuser))
         else:
@@ -59,5 +59,5 @@ class Command(BaseCommand):
                     self.style.SUCCESS('Employee "%s" created successfully' % employee)
                 )
             except Exception as e:
-                user.delete()
+                # user.delete()
                 raise CommandError('Error creating user "%s": %s' % (username, e))
